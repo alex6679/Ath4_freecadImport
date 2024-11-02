@@ -80,7 +80,11 @@ else:
     def create_loft(wires):
         doc = App.ActiveDocument
         # Create the loft
-        loft = Part.makeLoft(wires, True, False, False)  # True for solid loft, False for a shell
+        solid = True
+        ruled = False
+        closed = False
+        maxDegree = 3
+        loft = Part.makeLoft(wires, solid, ruled, closed, maxDegree)
         # Add the loft to the document
         loft_obj = doc.addObject("Part::Feature", "Loft")
         loft_obj.Shape = loft

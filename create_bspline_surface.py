@@ -4,18 +4,64 @@ import Part
 import csv
 from collections import defaultdict
 
-# Prompt the user to select the CSV file
-try:
-    from PySide import QtGui  # For FreeCAD versions up to 0.18
-except ImportError:
-    from PySide2 import QtWidgets as QtGui  # For FreeCAD 0.19 and above
+# Import QtWidgets from PySide2 for FreeCAD 0.19 and above
+from PySide2 import QtWidgets, QtCore
 
 # Open a file dialog to select the CSV file
-csv_file_path, _ = QtGui.QFileDialog.getOpenFileName(None, "Select CSV File", "", "CSV Files (*.csv)")
+csv_file_path, _ = QtWidgets.QFileDialog.getOpenFileName(None, "Select CSV File", "", "CSV Files (*.csv)")
 
 if not csv_file_path:
     print("No CSV file selected. Exiting.")
 else:
+    # Create a custom dialog to set 'solid', 'ruled', and 'closed' parameters
+    class LoftOptionsDialog(QtWidgets.QDialog):
+        def __init__(self, parent=None):
+            super(LoftOptionsDialog, self).__init__(parent)
+            self.setWindowTitle("Loft Options")
+            self.setMinimumWidth(200)
+
+            # Create checkboxes
+            self.solid_checkbox = QtWidgets.QCheckBox("Solid")
+            self.solid_checkbox.setChecked(True)
+            self.ruled_checkbox = QtWidgets.QCheckBox("Ruled")
+            self.ruled_checkbox.setChecked(False)
+            self.closed_checkbox = QtWidgets.QCheckBox("Closed")
+            self.closed_checkbox.setChecked(False)
+
+            # Create buttons
+            self.ok_button = QtWidgets.QPushButton("OK")
+            self.cancel_button = QtWidgets.QPushButton("Cancel")
+
+            # Connect buttons
+            self.ok_button.clicked.connect(self.accept)
+            self.cancel_button.clicked.connect(self.reject)
+
+            # Layout
+            layout = QtWidgets.QVBoxLayout()
+            layout.addWidget(self.solid_checkbox)
+            layout.addWidget(self.ruled_checkbox)
+            layout.addWidget(self.closed_checkbox)
+
+            button_layout = QtWidgets.QHBoxLayout()
+            button_layout.addStretch(1)
+            button_layout.addWidget(self.ok_button)
+            button_layout.addWidget(self.cancel_button)
+
+            layout.addLayout(button_layout)
+
+            self.setLayout(layout)
+
+    # Show the dialog and get user input
+    dialog = LoftOptionsDialog()
+    if dialog.exec_() == QtWidgets.QDialog.Accepted:
+        # Get the user's choices
+        solid = dialog.solid_checkbox.isChecked()
+        ruled = dialog.ruled_checkbox.isChecked()
+        closed = dialog.closed_checkbox.isChecked()
+    else:
+        print("Loft creation canceled by user.")
+        sys.exit()
+        
     # Read the CSV file and parse it into profiles
     def read_profiles(file_path):
         profiles = []
@@ -77,12 +123,9 @@ else:
         return wires
 
     # Create a loft connecting the wires
-    def create_loft(wires):
+    def create_loft(wires, solid=True, ruled=False, closed=False):
         doc = App.ActiveDocument
         # Create the loft
-        solid = True
-        ruled = False
-        closed = False
         maxDegree = 3
         loft = Part.makeLoft(wires, solid, ruled, closed, maxDegree)
         # Add the loft to the document
@@ -102,4 +145,4 @@ else:
         if len(wires) < 2:
             print("Need at least two wires to create a loft.")
         else:
-            create_loft(wires)
+            create_loft(wires, solid=solid, ruled=ruled, closed=closed)
